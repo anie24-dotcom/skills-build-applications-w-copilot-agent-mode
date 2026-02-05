@@ -14,10 +14,14 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+
+import os
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from django.http import JsonResponse
 from . import views
+
 
 router = DefaultRouter()
 router.register(r'users', views.UserViewSet, basename='user')
@@ -26,8 +30,30 @@ router.register(r'activities', views.ActivityViewSet, basename='activity')
 router.register(r'leaderboard', views.LeaderboardViewSet, basename='leaderboard')
 router.register(r'workouts', views.WorkoutViewSet, basename='workout')
 
+# Helper to get codespace URL
+def get_codespace_url(request):
+    codespace_name = os.environ.get('CODESPACE_NAME')
+    host = request.get_host()
+    if codespace_name and host.startswith(f"{codespace_name}-8000.app.github.dev"):
+        return f"https://{codespace_name}-8000.app.github.dev"
+    elif host.startswith('localhost') or host.startswith('127.0.0.1'):
+        return f"http://{host}"
+    else:
+        return f"https://{host}"
+
+# API root endpoint with full URLs
+def api_root(request):
+    base_url = get_codespace_url(request) + "/api/"
+    return JsonResponse({
+        'users': base_url + 'users/',
+        'teams': base_url + 'teams/',
+        'activities': base_url + 'activities/',
+        'leaderboard': base_url + 'leaderboard/',
+        'workouts': base_url + 'workouts/',
+    })
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
-    path('', views.api_root, name='api-root'),
+    path('', api_root, name='api-root'),
 ]
